@@ -1,0 +1,11 @@
+{
+  "name": "homehub",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Home management PWA: bills, insurance, staff, vehicles, appliances, documents.",
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "icons": "node scripts/make-icons.mjs"
+  }
+}
