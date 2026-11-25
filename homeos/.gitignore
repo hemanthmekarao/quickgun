@@ -10,3 +10,5 @@ coverage/
 apps/api/storage/
 playwright-report/
 test-results/
+apps/web/e2e/screenshots/
+next-env.d.ts

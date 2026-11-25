@@ -87,7 +87,7 @@ export class ResourcesModule {}
   imports: [
     ScheduleModule.forRoot(),
     // Default limit for every route; auth and assistant routes set tighter limits.
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: process.env.NODE_ENV === 'test' ? 100_000 : 300 }]),
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: process.env.NODE_ENV === 'test' ? 100_000 : Number(process.env.RATE_LIMIT_PER_MINUTE ?? 300) }]),
     CoreModule,
     AuthModule,
     HouseholdsModule,

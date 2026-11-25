@@ -63,3 +63,75 @@ jobs:
       - name: Integration tests
         if: ${{ hashFiles('homeos/apps/api/src/main.ts') != '' }}
         run: npm test -w @homeos/api
+
+  web:
+    name: Web app (type check + production build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run build -w @homeos/shared
+      - run: npm run build -w @homeos/web
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+
+  e2e:
+    name: End to end (seeded demo, every page in a browser)
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://homeos:homeos@localhost:5432/homeos_e2e
+      JWT_SECRET: ci-only-secret-ci-only-secret-ci-only-secret
+      DATA_ENCRYPTION_KEY: 000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
+      NODE_ENV: development
+      PAYMENTS_SANDBOX: 'true'
+      RATE_LIMIT_PER_MINUTE: '100000'
+      SCHEDULER_ENABLED: 'false'
+      PORT: '4000'
+      API_URL: http://localhost:4000
+      NEXT_TELEMETRY_DISABLED: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Start PostgreSQL
+        working-directory: .
+        run: |
+          docker run -d --name homeos-pg -e POSTGRES_USER=homeos -e POSTGRES_PASSWORD=homeos -e POSTGRES_DB=homeos_e2e -p 5432:5432 postgres:16
+          for i in $(seq 1 30); do docker exec homeos-pg pg_isready -U homeos -d homeos_e2e && break; sleep 1; done
+      - run: npm install --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+        working-directory: homeos/apps/web
+      - run: npm run build -w @homeos/shared
+      - run: npm run prisma:generate -w @homeos/api
+      - run: npm run prisma:push -w @homeos/api
+      - run: npm run build -w @homeos/api
+      - name: Build web
+        run: NODE_ENV=production npm run build -w @homeos/web
+      - name: Start API and web
+        run: |
+          (cd apps/api && nohup node dist/main.js > /tmp/api.log 2>&1 &)
+          (cd apps/web && NODE_ENV=production nohup npx next start -p 3000 > /tmp/web.log 2>&1 &)
+          for i in $(seq 1 60); do curl -sf http://localhost:4000/v1/health > /dev/null && curl -sf http://localhost:3000/login > /dev/null && break; sleep 1; done
+          curl -sf http://localhost:4000/v1/health
+          curl -sf http://localhost:4000/openapi.json | head -c 200
+      - name: Seed demo household
+        run: |
+          node apps/api/scripts/seed-demo.mjs --api http://localhost:4000 --email demo.e2e@example.com --password 'Demo-password-1' | tail -n 1 > /tmp/seed.json
+          cat /tmp/seed.json
+      - name: Browser smoke test
+        run: SEED_JSON="$(cat /tmp/seed.json)" WEB_URL=http://localhost:3000 node apps/web/e2e/smoke.mjs
+      - name: Server logs
+        if: always()
+        run: |
+          echo "--- api ---"; tail -n 60 /tmp/api.log || true
+          echo "--- web ---"; tail -n 30 /tmp/web.log || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: homeos/apps/web/e2e/screenshots
+          if-no-files-found: ignore

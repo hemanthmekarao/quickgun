@@ -29,7 +29,9 @@ export function diff(before: Record<string, any> | null, after: Record<string, a
     const from = before ? plain(before[key]) : null;
     const to = plain(after[key]);
     if (JSON.stringify(from) === JSON.stringify(to)) continue;
-    out[key] = REDACTED.has(key) ? { from: '[redacted]', to: '[redacted]' } : { from, to };
+    // Secrets and storage internals are left out of the audit trail altogether.
+    if (REDACTED.has(key)) continue;
+    out[key] = { from, to };
   }
   return out;
 }

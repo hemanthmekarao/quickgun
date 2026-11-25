@@ -349,20 +349,20 @@ describe('bills, payments and the ledger', () => {
     const event = JSON.stringify({ providerOrderId: order.body.providerOrderId, providerPaymentId: `pay_${run}`, status: 'succeeded', amount: 500 });
     const forged = await http.post('/v1/payments/webhooks/sandbox').set('Content-Type', 'application/json').set('x-sandbox-signature', 'deadbeef').send(event);
     expect(forged.status).toBe(403);
-    expect((await call('get', `/payments/orders/${order.body.id}`, owner)).body.status).toBe('AWAITING_CONFIRMATION');
+    expect((await call('get', `/payment-orders/${order.body.id}`, owner)).body.status).toBe('AWAITING_CONFIRMATION');
 
     const wrongAmount = JSON.stringify({ providerOrderId: order.body.providerOrderId, providerPaymentId: `pay_wrong_${run}`, status: 'succeeded', amount: 5 });
     const sign = (raw: string) => createHmac('sha256', 'sandbox-webhook-secret').update(raw).digest('hex');
     const mismatch = await http.post('/v1/payments/webhooks/sandbox').set('Content-Type', 'application/json').set('x-sandbox-signature', sign(wrongAmount)).send(wrongAmount);
     expect(mismatch.status).toBe(200);
-    expect((await call('get', `/payments/orders/${order.body.id}`, owner)).body.status).toBe('FAILED');
+    expect((await call('get', `/payment-orders/${order.body.id}`, owner)).body.status).toBe('FAILED');
     expect((await call('get', `/bills/${bill.body.id}`, owner)).body.status).toBe('UNPAID');
 
     const second = await call('post', '/payments/orders', owner, { billId: bill.body.id, provider: 'sandbox' });
     const ok = JSON.stringify({ providerOrderId: second.body.providerOrderId, providerPaymentId: `pay_ok_${run}`, status: 'succeeded', amount: 500 });
     const good = await http.post('/v1/payments/webhooks/sandbox').set('Content-Type', 'application/json').set('x-sandbox-signature', sign(ok)).send(ok);
     expect(good.status).toBe(200);
-    expect((await call('get', `/payments/orders/${second.body.id}`, owner)).body.status).toBe('SUCCEEDED');
+    expect((await call('get', `/payment-orders/${second.body.id}`, owner)).body.status).toBe('SUCCEEDED');
     expect((await call('get', `/bills/${bill.body.id}`, owner)).body.status).toBe('PAID');
     // Replaying the same event changes nothing.
     const replay = await http.post('/v1/payments/webhooks/sandbox').set('Content-Type', 'application/json').set('x-sandbox-signature', sign(ok)).send(ok);

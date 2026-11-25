@@ -14,8 +14,7 @@
     "prisma:validate": "prisma validate",
     "prisma:push": "prisma db push --skip-generate",
     "prisma:migrate": "prisma migrate deploy",
-    "seed": "node dist/seed.js",
-    "openapi": "node dist/openapi-export.js"
+    "seed": "node scripts/seed-demo.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.600.0",
