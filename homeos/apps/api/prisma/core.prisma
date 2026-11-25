@@ -1,0 +1,231 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Core models (identity, tenancy, access control)
+// ---------------------------------------------------------------------------
+
+model User {
+  id               String            @id @default(uuid()) @db.Uuid
+  email            String            @unique
+  passwordHash     String
+  name             String
+  phone            String?
+  mfaEnabled       Boolean           @default(false)
+  mfaSecret        String?
+  mfaPendingSecret String?
+  failedLogins     Int               @default(0)
+  lockedUntil      DateTime?
+  status           String            @default("ACTIVE")
+  lastLoginAt      DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  deletedAt        DateTime?
+  sessions         Session[]
+  memberships      HouseholdMember[]
+  conversations    AIConversation[]
+  deviceTokens     DeviceToken[]
+  consents         Consent[]
+}
+
+model Session {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @db.Uuid
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokenHash String    @unique
+  userAgent        String?
+  ip               String?
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  lastUsedAt       DateTime  @default(now())
+  createdAt        DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Household {
+  id                String            @id @default(uuid()) @db.Uuid
+  name              String
+  currency          String            @default("INR")
+  country           String            @default("IN")
+  timezone          String            @default("Asia/Kolkata")
+  approvalThreshold Decimal?          @db.Decimal(14, 2)
+  status            String            @default("ACTIVE")
+  createdById       String?           @db.Uuid
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  deletedAt         DateTime?
+  members           HouseholdMember[]
+  roles             Role[]
+  permissions       Permission[]
+  documentVersions  DocumentVersion[]
+  documentShares    DocumentShare[]
+  conversations     AIConversation[]
+  dataRequests      DataRequest[]
+  //@@HOUSEHOLD_BACKRELS
+}
+
+model Role {
+  id          String            @id @default(uuid()) @db.Uuid
+  householdId String            @db.Uuid
+  household   Household         @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  key         String
+  name        String
+  isSystem    Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  permissions Permission[]
+  members     HouseholdMember[]
+
+  @@unique([householdId, key])
+}
+
+model Permission {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  roleId      String    @db.Uuid
+  role        Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  module      String
+  canRead     Boolean   @default(false)
+  canWrite    Boolean   @default(false)
+  canDelete   Boolean   @default(false)
+  canApprove  Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([roleId, module])
+  @@index([householdId])
+}
+
+model HouseholdMember {
+  id              String    @id @default(uuid()) @db.Uuid
+  householdId     String    @db.Uuid
+  household       Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  userId          String?   @db.Uuid
+  user            User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  roleId          String    @db.Uuid
+  role            Role      @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  name            String
+  email           String?
+  phone           String?
+  relationship    String?
+  dateOfBirth     DateTime?
+  bloodGroup      String?
+  propertyScope   String[]  @default([])
+  inviteTokenHash String?   @unique
+  inviteExpiresAt DateTime?
+  joinedAt        DateTime?
+  status          String    @default("ACTIVE")
+  createdById     String?   @db.Uuid
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+  //@@MEMBER_BACKRELS
+
+  @@unique([householdId, userId])
+  @@index([householdId, deletedAt])
+}
+
+model DocumentVersion {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  documentId  String    @db.Uuid
+  document    Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  version     Int
+  fileName    String
+  mimeType    String
+  sizeBytes   Int
+  storageKey  String
+  checksum    String
+  note        String?
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+
+  @@unique([documentId, version])
+  @@index([householdId])
+}
+
+model DocumentShare {
+  id            String    @id @default(uuid()) @db.Uuid
+  householdId   String    @db.Uuid
+  household     Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  documentId    String    @db.Uuid
+  document      Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  tokenHash     String    @unique
+  expiresAt     DateTime
+  maxDownloads  Int?
+  downloadCount Int       @default(0)
+  revokedAt     DateTime?
+  note          String?
+  createdById   String?   @db.Uuid
+  createdAt     DateTime  @default(now())
+
+  @@index([householdId, documentId])
+}
+
+model AIConversation {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  userId      String    @db.Uuid
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  messages    Json      @default("[]")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId, userId])
+}
+
+model DeviceToken {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token      String   @unique
+  platform   String
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Consent {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @db.Uuid
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose     String
+  granted     Boolean   @default(false)
+  version     String    @default("1")
+  grantedAt   DateTime?
+  withdrawnAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([userId, purpose])
+}
+
+model DataRequest {
+  id           String     @id @default(uuid()) @db.Uuid
+  householdId  String?    @db.Uuid
+  household    Household? @relation(fields: [householdId], references: [id], onDelete: SetNull)
+  userId       String     @db.Uuid
+  type         String
+  scope        String
+  status       String     @default("REQUESTED")
+  scheduledFor DateTime?
+  completedAt  DateTime?
+  note         String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([userId])
+}

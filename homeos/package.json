@@ -1,0 +1,18 @@
+{
+  "name": "homeos",
+  "private": true,
+  "version": "0.1.0",
+  "description": "HomeOS — personal home management platform (API-first monorepo)",
+  "workspaces": ["packages/*", "apps/*"],
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build:shared": "npm run build -w @homeos/shared",
+    "build": "npm run build:shared && npm run build -w @homeos/api && npm run build -w @homeos/web",
+    "dev:api": "npm run dev -w @homeos/api",
+    "dev:web": "npm run dev -w @homeos/web",
+    "test": "npm run test -w @homeos/shared && npm run test -w @homeos/api",
+    "db:generate": "node apps/api/scripts/generate-schema.mjs && npm run prisma:generate -w @homeos/api",
+    "db:push": "npm run prisma:push -w @homeos/api",
+    "db:seed": "npm run seed -w @homeos/api"
+  }
+}

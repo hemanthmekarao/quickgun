@@ -1,0 +1,75 @@
+name: HomeOS CI
+
+on:
+  pull_request:
+    paths: ['homeos/**', '.github/workflows/homeos-ci.yml']
+  push:
+    branches: [main]
+    paths: ['homeos/**', '.github/workflows/homeos-ci.yml']
+
+concurrency:
+  group: homeos-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: homeos
+
+jobs:
+  shared:
+    name: Shared package (build + unit tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run build -w @homeos/shared
+      - run: npm test -w @homeos/shared
+
+  api:
+    name: API (schema, build, integration tests)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: homeos
+          POSTGRES_PASSWORD: homeos
+          POSTGRES_DB: homeos_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U homeos"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+    env:
+      DATABASE_URL: postgresql://homeos:homeos@localhost:5432/homeos_test
+      JWT_SECRET: ci-only-secret-ci-only-secret-ci-only-secret
+      DATA_ENCRYPTION_KEY: 000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run build -w @homeos/shared
+      - name: Generated Prisma schema is up to date
+        run: node apps/api/scripts/generate-schema.mjs --check
+      - run: npm run prisma:validate -w @homeos/api
+      - run: npm run prisma:generate -w @homeos/api
+      - run: npm run prisma:push -w @homeos/api
+      - name: Build API
+        if: ${{ hashFiles('homeos/apps/api/src/main.ts') != '' }}
+        run: npm run build -w @homeos/api
+      - name: Integration tests
+        if: ${{ hashFiles('homeos/apps/api/src/main.ts') != '' }}
+        run: npm test -w @homeos/api
