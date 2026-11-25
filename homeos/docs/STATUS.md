@@ -95,4 +95,5 @@ Treat each of these as untested until you have tried it with real credentials:
 - Lists page at 25–200 rows; a few summary screens load up to 200 rows and would under-count beyond that.
 - Property restriction applies to records that are linked to a property directly or through their parent (a bill through its utility account, a fuel entry through its vehicle, a salary through the staff member). Records with no property link at all — subscriptions, vendors, bank accounts — are governed by role permissions only.
 - The recorded `AI_PROCESSING` consent does not yet gate AI calls.
+- Rate limiting is per client IP address. The web app reaches the API through the Next.js server, so check in your deployment that the original client address is forwarded (`X-Forwarded-For`); if it is not, all web users share one rate-limit bucket. What Next.js forwards by default has not been verified.
 - The web app is client-rendered; there is no offline data access (the service worker caches only the static shell).
