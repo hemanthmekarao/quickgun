@@ -154,7 +154,7 @@ model HouseholdMember {
   userId          String?   @db.Uuid
   user            User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
   roleId          String    @db.Uuid
-  role            Role      @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  role            Role      @relation(fields: [roleId], references: [id], onDelete: NoAction)
   name            String
   email           String?
   phone           String?
@@ -371,7 +371,7 @@ model PropertyOwnership {
   householdId String    @db.Uuid
   household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
   propertyId String @db.Uuid
-  propertyRef Property @relation("PropertyOwnership_propertyId", fields: [propertyId], references: [id], onDelete: Restrict)
+  propertyRef Property @relation("PropertyOwnership_propertyId", fields: [propertyId], references: [id], onDelete: NoAction)
   ownerName String
   memberId String? @db.Uuid
   memberRef HouseholdMember? @relation("PropertyOwnership_memberId", fields: [memberId], references: [id], onDelete: SetNull)
@@ -393,7 +393,7 @@ model Room {
   householdId String    @db.Uuid
   household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
   propertyId String @db.Uuid
-  propertyRef Property @relation("Room_propertyId", fields: [propertyId], references: [id], onDelete: Restrict)
+  propertyRef Property @relation("Room_propertyId", fields: [propertyId], references: [id], onDelete: NoAction)
   name String
   roomType String?
   floor String?
@@ -504,7 +504,7 @@ model Transaction {
   householdId String    @db.Uuid
   household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
   bankAccountId String @db.Uuid
-  bankAccountRef BankAccount @relation("Transaction_bankAccountId", fields: [bankAccountId], references: [id], onDelete: Restrict)
+  bankAccountRef BankAccount @relation("Transaction_bankAccountId", fields: [bankAccountId], references: [id], onDelete: NoAction)
   date DateTime
   description String
   amount Decimal @db.Decimal(14, 2)
@@ -587,7 +587,7 @@ model Bill {
   householdId String    @db.Uuid
   household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
   providerId String @db.Uuid
-  providerRef BillProvider @relation("Bill_providerId", fields: [providerId], references: [id], onDelete: Restrict)
+  providerRef BillProvider @relation("Bill_providerId", fields: [providerId], references: [id], onDelete: NoAction)
   billNumber String?
   billDate DateTime?
   periodStart DateTime?
@@ -813,7 +813,7 @@ model AssetValuation {
   householdId String    @db.Uuid
   household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
   assetId String @db.Uuid
-  assetRef Asset @relation("AssetValuation_assetId", fields: [assetId], references: [id], onDelete: Restrict)
+  assetRef Asset @relation("AssetValuation_assetId", fields: [assetId], references: [id], onDelete: NoAction)
   date DateTime
   value Decimal @db.Decimal(14, 2)
   valuer String?
@@ -892,7 +892,7 @@ model FuelLog {
   householdId String    @db.Uuid
   household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
   vehicleId String @db.Uuid
-  vehicleRef Vehicle @relation("FuelLog_vehicleId", fields: [vehicleId], references: [id], onDelete: Restrict)
+  vehicleRef Vehicle @relation("FuelLog_vehicleId", fields: [vehicleId], references: [id], onDelete: NoAction)
   date DateTime
   fuelType String?
   quantity Float
@@ -921,7 +921,7 @@ model VehicleService {
   householdId String    @db.Uuid
   household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
   vehicleId String @db.Uuid
-  vehicleRef Vehicle @relation("VehicleService_vehicleId", fields: [vehicleId], references: [id], onDelete: Restrict)
+  vehicleRef Vehicle @relation("VehicleService_vehicleId", fields: [vehicleId], references: [id], onDelete: NoAction)
   date DateTime
   serviceType String
   description String?
@@ -1100,7 +1100,7 @@ model WorkOrder {
   householdId String    @db.Uuid
   household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
   taskId String @db.Uuid
-  taskRef MaintenanceTask @relation("WorkOrder_taskId", fields: [taskId], references: [id], onDelete: Restrict)
+  taskRef MaintenanceTask @relation("WorkOrder_taskId", fields: [taskId], references: [id], onDelete: NoAction)
   title String
   vendorId String? @db.Uuid
   vendorRef Vendor? @relation("WorkOrder_vendorId", fields: [vendorId], references: [id], onDelete: SetNull)
@@ -1180,7 +1180,7 @@ model Attendance {
   householdId String    @db.Uuid
   household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
   staffId String @db.Uuid
-  staffRef Staff @relation("Attendance_staffId", fields: [staffId], references: [id], onDelete: Restrict)
+  staffRef Staff @relation("Attendance_staffId", fields: [staffId], references: [id], onDelete: NoAction)
   date DateTime
   status String @default("PRESENT")
   notes String?
@@ -1199,7 +1199,7 @@ model Salary {
   householdId String    @db.Uuid
   household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
   staffId String @db.Uuid
-  staffRef Staff @relation("Salary_staffId", fields: [staffId], references: [id], onDelete: Restrict)
+  staffRef Staff @relation("Salary_staffId", fields: [staffId], references: [id], onDelete: NoAction)
   month String
   baseAmount Decimal @db.Decimal(14, 2)
   bonus Decimal? @db.Decimal(14, 2)
@@ -1231,7 +1231,7 @@ model StaffAdvance {
   householdId String    @db.Uuid
   household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
   staffId String @db.Uuid
-  staffRef Staff @relation("StaffAdvance_staffId", fields: [staffId], references: [id], onDelete: Restrict)
+  staffRef Staff @relation("StaffAdvance_staffId", fields: [staffId], references: [id], onDelete: NoAction)
   date DateTime
   amount Decimal @db.Decimal(14, 2)
   reason String?
@@ -1291,7 +1291,7 @@ model InsuranceClaim {
   householdId String    @db.Uuid
   household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
   policyId String @db.Uuid
-  policyRef InsurancePolicy @relation("InsuranceClaim_policyId", fields: [policyId], references: [id], onDelete: Restrict)
+  policyRef InsurancePolicy @relation("InsuranceClaim_policyId", fields: [policyId], references: [id], onDelete: NoAction)
   claimNumber String?
   claimDate DateTime
   memberId String? @db.Uuid
@@ -1321,7 +1321,7 @@ model MedicalRecord {
   householdId String    @db.Uuid
   household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
   memberId String @db.Uuid
-  memberRef HouseholdMember @relation("MedicalRecord_memberId", fields: [memberId], references: [id], onDelete: Restrict)
+  memberRef HouseholdMember @relation("MedicalRecord_memberId", fields: [memberId], references: [id], onDelete: NoAction)
   recordType String
   date DateTime
   provider String?
@@ -1428,7 +1428,7 @@ model TravelDocument {
   householdId String    @db.Uuid
   household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
   memberId String @db.Uuid
-  memberRef HouseholdMember @relation("TravelDocument_memberId", fields: [memberId], references: [id], onDelete: Restrict)
+  memberRef HouseholdMember @relation("TravelDocument_memberId", fields: [memberId], references: [id], onDelete: NoAction)
   docType String
   country String?
   numberLast4 String?

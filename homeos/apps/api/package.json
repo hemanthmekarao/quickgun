@@ -9,7 +9,7 @@
     "start": "node dist/main.js",
     "dev": "tsc -p tsconfig.build.json && node dist/main.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "jest --runInBand --forceExit",
+    "test": "node test/crypto.unit.mjs && jest --runInBand --forceExit",
     "prisma:generate": "prisma generate",
     "prisma:validate": "prisma validate",
     "prisma:push": "prisma db push --skip-generate",

@@ -85,7 +85,7 @@ for (const def of RESOURCES) {
       const relName = `${def.model}_${field.key}`;
       const relField = `${field.key.replace(/Id$/, '')}Ref`;
       lines.push(
-        `  ${relField} ${target}${field.required ? '' : '?'} @relation("${relName}", fields: [${field.key}], references: [id], onDelete: ${field.required ? 'Restrict' : 'SetNull'})`,
+        `  ${relField} ${target}${field.required ? '' : '?'} @relation("${relName}", fields: [${field.key}], references: [id], onDelete: ${field.required ? 'NoAction' : 'SetNull'})`,
       );
       (backRels[target] ??= []).push(`  ${delegateName(def.model)}_${field.key} ${def.model}[] @relation("${relName}")`);
       if (field.required) indexes.push(`@@index([${field.key}])`);
