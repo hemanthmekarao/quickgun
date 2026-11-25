@@ -53,6 +53,29 @@ export function contentMatches(mime: string, data: Buffer): boolean {
   }
 }
 
+/** Text layer of a PDF, page by page, using Mozilla's pdf.js (legacy CommonJS build for Node). */
+export async function pdfText(data: Buffer, maxPages = 300): Promise<string> {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const pdfjs = require('pdfjs-dist/legacy/build/pdf.js');
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(data), isEvalSupported: false, disableFontFace: true, useSystemFonts: false, verbosity: 0 }).promise;
+  try {
+    const pages: string[] = [];
+    for (let n = 1; n <= Math.min(doc.numPages, maxPages); n++) {
+      const page = await doc.getPage(n);
+      const content = await page.getTextContent();
+      let text = '';
+      for (const item of content.items as { str?: string; hasEOL?: boolean }[]) {
+        if (typeof item.str !== 'string') continue;
+        text += item.str + (item.hasEOL ? '\n' : ' ');
+      }
+      pages.push(text.replace(/[ \t]+\n/g, '\n').trim());
+    }
+    return pages.join('\n\n').trim();
+  } finally {
+    await doc.destroy().catch(() => undefined);
+  }
+}
+
 /**
  * Extract searchable text from an uploaded file.
  * - Text formats: read directly.
@@ -65,12 +88,7 @@ export async function extractText(data: Buffer, mime: string): Promise<{ text: s
       return { text: data.toString('utf8').slice(0, 200_000), status: 'DONE' };
     }
     if (mime === 'application/pdf') {
-      // The package entry point runs a self-test when loaded outside a parent module; use the library file.
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const pdfParse = require('pdf-parse/lib/pdf-parse.js');
-      const res = await pdfParse(data);
-      const text = String(res?.text ?? '').trim();
-      return { text: text.slice(0, 200_000), status: 'DONE' };
+      return { text: (await pdfText(data)).slice(0, 200_000), status: 'DONE' };
     }
     if (mime.startsWith('image/')) {
       if (!llmConfigured() || mime === 'image/heic') return { text: '', status: 'NOT_SUPPORTED' };
