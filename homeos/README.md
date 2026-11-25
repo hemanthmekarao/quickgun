@@ -65,7 +65,7 @@ The Docker files were written without a Docker daemon available to test them; se
 ## Tests
 
 ```bash
-npm test -w @homeos/shared     # 28 unit tests, no dependencies
+npm test -w @homeos/shared     # 29 unit tests, no dependencies
 npm test -w @homeos/api        # security-primitive checks + end-to-end API tests (needs DATABASE_URL)
 npm run e2e -w @homeos/web     # browser smoke test over every route (needs a running, seeded stack)
 ```
