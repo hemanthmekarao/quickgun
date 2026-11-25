@@ -68,7 +68,7 @@ export class AuthService {
     const name = String(body?.name ?? '').trim();
     const inviteToken = body?.inviteToken ? String(body.inviteToken) : null;
     const householdName = String(body?.householdName ?? '').trim() || (name ? `${name.split(' ')[0]}'s Home` : '');
-    const issues = [];
+    const issues: { field: string; message: string }[] = [];
     if (!EMAIL_RE.test(email) || email.length > 254) issues.push({ field: 'email', message: 'must be a valid e-mail address' });
     if (name.length < 1 || name.length > 120) issues.push({ field: 'name', message: 'is required' });
     const pw = passwordIssues(body?.password);

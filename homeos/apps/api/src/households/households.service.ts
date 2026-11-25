@@ -112,7 +112,7 @@ export class HouseholdsService {
   async createForUser(auth: AuthInfo, body: any) {
     const name = String(body?.name ?? '').trim();
     const currency = String(body?.currency ?? 'INR').trim().toUpperCase();
-    const issues = [];
+    const issues: { field: string; message: string }[] = [];
     if (name.length < 2 || name.length > 100) issues.push({ field: 'name', message: 'must be between 2 and 100 characters' });
     if (!CURRENCY_RE.test(currency)) issues.push({ field: 'currency', message: 'must be a 3-letter currency code' });
     if (issues.length) throw validationFailed(issues);
@@ -158,7 +158,7 @@ export class HouseholdsService {
   async updateCurrent(ctx: Ctx, body: any) {
     need(ctx, 'settings', 'write');
     const data: Record<string, any> = {};
-    const issues = [];
+    const issues: { field: string; message: string }[] = [];
     if (body?.name !== undefined) {
       const name = String(body.name).trim();
       if (name.length < 2 || name.length > 100) issues.push({ field: 'name', message: 'must be between 2 and 100 characters' });
@@ -226,7 +226,7 @@ export class HouseholdsService {
     const name = String(body?.name ?? '').trim();
     const email = body?.email ? String(body.email).trim().toLowerCase() : null;
     const invite = Boolean(body?.invite);
-    const issues = [];
+    const issues: { field: string; message: string }[] = [];
     if (name.length < 1 || name.length > 120) issues.push({ field: 'name', message: 'is required' });
     if (email && !EMAIL_RE.test(email)) issues.push({ field: 'email', message: 'must be a valid e-mail address' });
     if (invite && !email) issues.push({ field: 'email', message: 'is required to send an invitation' });

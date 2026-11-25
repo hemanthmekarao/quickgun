@@ -314,7 +314,7 @@ export class DocumentsService {
         ip: ip ?? null,
       },
     });
-    return { data: await this.storage.get(share.document.storageKey), mimeType: share.document.mimeType, fileName: share.document.fileName };
+    return { data: await this.storage.get(share.document.storageKey as string), mimeType: share.document.mimeType ?? 'application/octet-stream', fileName: share.document.fileName ?? 'document' };
   }
 
   /* ---------------- search ---------------- */

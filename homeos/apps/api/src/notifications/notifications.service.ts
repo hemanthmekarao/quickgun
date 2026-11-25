@@ -238,7 +238,7 @@ export class NotificationsService implements OnModuleInit {
   async registerDevice(auth: AuthInfo, body: any) {
     const token = String(body?.token ?? '').trim();
     const platform = String(body?.platform ?? '').toLowerCase();
-    const issues = [];
+    const issues: { field: string; message: string }[] = [];
     if (token.length < 10 || token.length > 500) issues.push({ field: 'token', message: 'is required' });
     if (!['ios', 'android', 'web'].includes(platform)) issues.push({ field: 'platform', message: 'must be ios, android or web' });
     if (issues.length) throw validationFailed(issues);

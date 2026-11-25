@@ -83,7 +83,7 @@ export class InboxService {
     const subject = String(body?.subject ?? '(no subject)');
     const from = body?.from ? String(body.from).slice(0, 254) : null;
     const attachments: any[] = Array.isArray(body?.attachments) ? body.attachments.slice(0, 10) : [];
-    const created = [];
+    const created: any[] = [];
     for (const a of attachments) {
       if (!a?.filename || !a?.contentBase64) continue;
       const buffer = Buffer.from(String(a.contentBase64), 'base64');

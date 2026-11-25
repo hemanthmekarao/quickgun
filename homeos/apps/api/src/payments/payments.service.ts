@@ -169,7 +169,7 @@ export class PaymentsService {
   }
 
   private parseCommon(body: any, target: Target | null) {
-    const issues = [];
+    const issues: { field: string; message: string }[] = [];
     const amount = body?.amount === undefined || body?.amount === null || body?.amount === '' ? (target ? target.due : NaN) : Number(body.amount);
     if (!Number.isFinite(amount) || amount <= 0) issues.push({ field: 'amount', message: 'must be greater than zero' });
     if (target && amount > target.due + 0.005) issues.push({ field: 'amount', message: `is more than the outstanding amount (${target.due})` });
@@ -387,7 +387,7 @@ export class PaymentsService {
     const date = body?.date ? parseDate(body.date) : startOfDay(new Date());
     const refunded: any[] = await this.prisma.paymentTransaction.findMany({ where: { householdId: ctx.householdId, deletedAt: null, orderId: order.id, kind: 'REFUND' } });
     const already = refunded.reduce((s, r) => s + num(r.amount), 0);
-    const issues = [];
+    const issues: { field: string; message: string }[] = [];
     if (!Number.isFinite(amount) || amount <= 0) issues.push({ field: 'amount', message: 'must be greater than zero' });
     else if (amount + already > num(order.amount) + 0.005) issues.push({ field: 'amount', message: 'exceeds the amount that was paid' });
     if (!date) issues.push({ field: 'date', message: 'must be a valid date' });

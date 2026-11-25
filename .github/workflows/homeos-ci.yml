@@ -34,22 +34,6 @@ jobs:
   api:
     name: API (schema, build, integration tests)
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: homeos
-          POSTGRES_PASSWORD: homeos
-          POSTGRES_DB: homeos_test
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd "pg_isready -U homeos"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-      redis:
-        image: redis:7
-        ports: ['6379:6379']
     env:
       DATABASE_URL: postgresql://homeos:homeos@localhost:5432/homeos_test
       JWT_SECRET: ci-only-secret-ci-only-secret-ci-only-secret
@@ -60,6 +44,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      # Started with docker run (not a service container) so its logs do not bury the test output.
+      - name: Start PostgreSQL
+        working-directory: .
+        run: |
+          docker run -d --name homeos-pg -e POSTGRES_USER=homeos -e POSTGRES_PASSWORD=homeos -e POSTGRES_DB=homeos_test -p 5432:5432 postgres:16
+          for i in $(seq 1 30); do docker exec homeos-pg pg_isready -U homeos -d homeos_test && break; sleep 1; done
       - run: npm install --no-audit --no-fund
       - run: npm run build -w @homeos/shared
       - name: Generated Prisma schema is up to date
