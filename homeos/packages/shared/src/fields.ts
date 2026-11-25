@@ -99,5 +99,5 @@ export function system(fields: FieldDef[]): FieldDef[] {
 
 export function humanize(value: string): string {
   const s = value.replace(/_/g, ' ').toLowerCase();
-  return s.charAt(0).toUpperCase() + s.slice(1);
+  return (s.charAt(0).toUpperCase() + s.slice(1)).replace(/\b(upi|dth|lpg|emi|ott|cctv|cng|oci|amc|puc|gst|ac|tv|ups|pan|sms)\b/gi, (m) => m.toUpperCase());
 }

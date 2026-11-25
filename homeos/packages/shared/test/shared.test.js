@@ -111,6 +111,14 @@ test('validate: reminder offsets and salary month formats', () => {
   assert.ok(!s.validateRecord(sal, { ...base, month: '2026-13' }).ok);
 });
 
+test('humanize keeps common acronyms upper-case', () => {
+  assert.equal(s.humanize('HOME_LOAN_EMI'), 'Home loan EMI');
+  assert.equal(s.humanize('UPI'), 'UPI');
+  assert.equal(s.humanize('AC_SERVICE'), 'AC service');
+  assert.equal(s.humanize('FOOD_DELIVERY'), 'Food delivery');
+  assert.equal(s.humanize('VACANT'), 'Vacant');
+});
+
 /* ---------------- dates ---------------- */
 
 test('dates: month arithmetic clamps and recurrence advances', () => {

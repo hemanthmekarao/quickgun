@@ -95,7 +95,7 @@ export default function DashboardPage() {
         {s ? (
           <Card>
             <CardHeader title="This month by category" />
-            <Donut data={s.byCategory.map((c: any) => ({ label: label(c.category), value: c.amount }))} format={fmt} />
+            <Donut data={s.byCategory.map((c: any) => ({ label: label(c.category), value: c.amount }))} format={fmt} stacked />
           </Card>
         ) : null}
 

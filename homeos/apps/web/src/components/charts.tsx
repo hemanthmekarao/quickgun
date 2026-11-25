@@ -42,14 +42,14 @@ export function BarChart({ data, format, height = 160, highlightLast }: { data: 
 }
 
 /** Donut with legend. Negative or zero slices are ignored. */
-export function Donut({ data, format, size = 132 }: { data: { label: string; value: number }[]; format: (n: number) => string; size?: number }) {
+export function Donut({ data, format, size = 132, stacked }: { data: { label: string; value: number }[]; format: (n: number) => string; size?: number; /** Put the legend under the chart (for narrow cards). */ stacked?: boolean }) {
   const slices = data.filter((d) => d.value > 0);
   const total = slices.reduce((s, d) => s + d.value, 0);
   if (total <= 0) return <p className="py-8 text-center text-sm text-muted">No spending recorded for this period.</p>;
   const r = 15.9155; // circumference = 100
   let offset = 25;
   return (
-    <div className="flex flex-col items-center gap-5 sm:flex-row">
+    <div className={cx('flex flex-col items-center', stacked ? 'gap-4' : 'gap-5 sm:flex-row')}>
       <svg width={size} height={size} viewBox="0 0 42 42" role="img" aria-label="Breakdown chart" className="shrink-0">
         <circle cx="21" cy="21" r={r} fill="none" stroke="rgb(var(--subtle))" strokeWidth="5" />
         {slices.map((d, i) => {
