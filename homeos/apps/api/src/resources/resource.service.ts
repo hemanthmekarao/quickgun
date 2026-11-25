@@ -71,6 +71,11 @@ export class ResourceService {
     if (ctx.propertyScope.length > 0) {
       if (def.key === 'properties') and.push({ id: { in: ctx.propertyScope } });
       else if (def.fields.some((x) => x.key === 'propertyId')) and.push({ propertyId: { in: ctx.propertyScope } });
+      else {
+        // Child records (a bill of a utility account, a fuel entry of a vehicle, …) follow their parent's property.
+        const parent = def.fields.find((x) => x.type === 'ref' && x.required && RESOURCE_MAP[x.ref!]?.fields.some((y) => y.key === 'propertyId'));
+        if (parent) and.push({ [`${parent.key.replace(/Id$/, '')}Ref`]: { propertyId: { in: ctx.propertyScope } } });
+      }
     }
     if (def.key === 'documents') {
       and.push({ sensitivity: { in: visibleSensitivities(ctx.perms) } });

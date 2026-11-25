@@ -540,6 +540,36 @@ describe('documents', () => {
     expect(fake.status).toBe(415);
   });
 
+  it('reads the text layer of a PDF and makes it searchable', async () => {
+    // A minimal one-page PDF built by hand, with correct cross-reference offsets.
+    const objects = [
+      '<< /Type /Catalog /Pages 2 0 R >>',
+      '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+      '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+      null,
+      '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    ];
+    const stream = 'BT /F1 14 Tf 72 720 Td (Occupancy certificate for the zebrawood annexe) Tj ET';
+    objects[3] = `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`;
+    let pdf = '%PDF-1.4\n';
+    const offsets: number[] = [];
+    objects.forEach((body, i) => {
+      offsets.push(pdf.length);
+      pdf += `${i + 1} 0 obj\n${body}\nendobj\n`;
+    });
+    const xref = pdf.length;
+    pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('')}`;
+    pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+    const up = await http.post('/v1/documents/upload').set('Authorization', `Bearer ${owner.token}`).set('X-Household-Id', owner.hh).attach('file', Buffer.from(pdf, 'latin1'), 'certificate.pdf');
+    expect(up.status).toBe(201);
+    expect(up.body).toMatchObject({ mimeType: 'application/pdf', ocrStatus: 'DONE' });
+    const got = await call('get', `/documents/${up.body.id}`, owner);
+    expect(got.body.extractedText).toContain('zebrawood');
+    expect(got.body._refs.categoryId?.label).toBe('Occupancy certificates');
+    const found = await call('get', '/document-search?q=zebrawood', owner);
+    expect(found.body.items.map((d: any) => d.id)).toEqual([up.body.id]);
+  });
+
   it('shares through an expiring, revocable, limited link', async () => {
     const share = await call('post', `/documents/${docId}/shares`, owner, { expiresInDays: 2, maxDownloads: 1 });
     expect(share.status).toBe(201);
@@ -674,6 +704,14 @@ describe('family members and role-based access', () => {
     expect((await call('post', '/maintenance-tasks', mgr, { title: 'Fix tap', category: 'PLUMBING', propertyId: p2.id })).status).toBe(400);
     expect((await call('post', '/maintenance-tasks', mgr, { title: 'Fix tap', category: 'PLUMBING', propertyId: p1.id })).status).toBe(201);
     expect((await call('get', '/expenses', mgr)).status).toBe(403);
+    // Bills follow the property of their utility account.
+    const own = await call('post', '/bill-providers', owner, { name: 'Water — scoped', utilityType: 'WATER', providerName: 'BWSSB', propertyId: p1.id });
+    const elsewhere = await call('post', '/bill-providers', owner, { name: 'Water — elsewhere', utilityType: 'WATER', providerName: 'BWSSB', propertyId: p2.id });
+    const mine = await call('post', '/bills', owner, { providerId: own.body.id, amount: 300, dueDate: iso(40) });
+    const theirs = await call('post', '/bills', owner, { providerId: elsewhere.body.id, amount: 400, dueDate: iso(40) });
+    const seen = await call('get', '/bills?pageSize=200', mgr);
+    expect(seen.body.items.map((b: any) => b.id)).toEqual([mine.body.id]);
+    expect((await call('get', `/bills/${theirs.body.id}`, mgr)).status).toBe(404);
   });
 });
 

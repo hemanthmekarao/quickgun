@@ -87,6 +87,13 @@ page.on('response', (res) => {
   else if (status >= 400 && !(current === 'login' && status === 401) && !expectRejection) note(current, `API ${status} ${res.request().method()} ${url.replace(WEB, '')}`);
 });
 
+/** With PRINT_SHOTS=1, write a compressed screenshot into the log so it can be reviewed without the artifact. */
+async function emit(name, fullPage = false) {
+  if (process.env.PRINT_SHOTS !== '1') return;
+  const buf = await page.screenshot({ type: 'jpeg', quality: 55, fullPage });
+  console.log(`SHOT:${name}:${buf.toString('base64')}`);
+}
+
 async function settle() {
   await page.waitForLoadState('networkidle', { timeout: 20_000 }).catch(() => undefined);
 }
@@ -119,6 +126,7 @@ for (const [path, expected] of ROUTES) {
   const text = await main.innerText();
   if (/Something went wrong|Application error|Not permitted/.test(text)) note(path, 'an error banner is showing');
   await page.screenshot({ path: join(shots, `desktop${path.replace(/[^a-z0-9]+/gi, '-').slice(0, 60)}.png`) });
+  if (['/dashboard', '/finance', '/bills/upcoming', '/documents', '/calendar', '/settings/users'].includes(path) || path.startsWith('/vehicles/')) await emit(`desktop${path.replace(/[^a-z]+/gi, '-').slice(0, 24)}`, path === '/dashboard');
   console.log(`  ✓ ${path}`);
 }
 
@@ -163,6 +171,7 @@ await settle();
 await page.getByRole('button', { name: /dark mode/ }).click();
 if (!(await page.evaluate(() => document.documentElement.classList.contains('dark')))) note(current, 'dark mode did not switch on');
 await page.screenshot({ path: join(shots, 'dark-dashboard.png'), fullPage: true });
+await emit('dark-dashboard');
 await page.getByRole('button', { name: /light mode/ }).click();
 
 /* ---- phone viewport: no horizontal overflow, menu works ---- */
@@ -200,9 +209,11 @@ try {
   note(current, `navigation from the mobile menu failed: ${String(err.message).split('\n')[0]}`);
 }
 await page.screenshot({ path: join(shots, 'mobile-vehicles.png') });
+await emit('mobile-vehicles');
 await page.goto(`${WEB}/dashboard`);
 await settle();
 await page.screenshot({ path: join(shots, 'mobile-dashboard.png'), fullPage: true });
+await emit('mobile-dashboard', true);
 console.log('  ✓ phone viewport checked');
 
 /* ---- sign out ---- */
