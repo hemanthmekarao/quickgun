@@ -1,0 +1,16 @@
+{
+  "name": "@homeos/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Dependency-free domain model, validation, business rules and API client shared by the HomeOS API, web app and mobile apps",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test test/shared.test.js"
+  },
+  "devDependencies": {
+    "typescript": "~5.6.3"
+  }
+}

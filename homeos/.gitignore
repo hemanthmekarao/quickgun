@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.next/
+out/
+*.tsbuildinfo
+.env
+.env.local
+.env.*.local
+coverage/
+apps/api/storage/
+playwright-report/
+test-results/
+apps/web/e2e/screenshots/
+next-env.d.ts

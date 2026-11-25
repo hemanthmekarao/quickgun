@@ -1,0 +1,1603 @@
+// GENERATED FILE — do not edit by hand.
+// Source: prisma/core.prisma + packages/shared/src/resources.ts
+// Regenerate with: npm run db:generate
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Core models (identity, tenancy, access control)
+// ---------------------------------------------------------------------------
+
+model User {
+  id               String            @id @default(uuid()) @db.Uuid
+  email            String            @unique
+  passwordHash     String
+  name             String
+  phone            String?
+  mfaEnabled       Boolean           @default(false)
+  mfaSecret        String?
+  mfaPendingSecret String?
+  failedLogins     Int               @default(0)
+  lockedUntil      DateTime?
+  status           String            @default("ACTIVE")
+  lastLoginAt      DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  deletedAt        DateTime?
+  sessions         Session[]
+  memberships      HouseholdMember[]
+  conversations    AIConversation[]
+  deviceTokens     DeviceToken[]
+  consents         Consent[]
+}
+
+model Session {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @db.Uuid
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokenHash String    @unique
+  userAgent        String?
+  ip               String?
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  lastUsedAt       DateTime  @default(now())
+  createdAt        DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Household {
+  id                String            @id @default(uuid()) @db.Uuid
+  name              String
+  currency          String            @default("INR")
+  country           String            @default("IN")
+  timezone          String            @default("Asia/Kolkata")
+  approvalThreshold Decimal?          @db.Decimal(14, 2)
+  status            String            @default("ACTIVE")
+  createdById       String?           @db.Uuid
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  deletedAt         DateTime?
+  members           HouseholdMember[]
+  roles             Role[]
+  permissions       Permission[]
+  documentVersions  DocumentVersion[]
+  documentShares    DocumentShare[]
+  conversations     AIConversation[]
+  dataRequests      DataRequest[]
+  propertyRecords Property[]
+  propertyOwnershipRecords PropertyOwnership[]
+  roomRecords Room[]
+  bankAccountRecords BankAccount[]
+  expenseRecords Expense[]
+  transactionRecords Transaction[]
+  budgetRecords Budget[]
+  billProviderRecords BillProvider[]
+  billRecords Bill[]
+  subscriptionRecords Subscription[]
+  documentCategoryRecords DocumentCategory[]
+  documentRecords Document[]
+  inboxItemRecords InboxItem[]
+  assetCategoryRecords AssetCategory[]
+  assetRecords Asset[]
+  assetValuationRecords AssetValuation[]
+  vehicleRecords Vehicle[]
+  fuelLogRecords FuelLog[]
+  vehicleServiceRecords VehicleService[]
+  applianceRecords Appliance[]
+  warrantyRecords Warranty[]
+  vendorRecords Vendor[]
+  maintenanceTaskRecords MaintenanceTask[]
+  workOrderRecords WorkOrder[]
+  staffRecords Staff[]
+  attendanceRecords Attendance[]
+  salaryRecords Salary[]
+  staffAdvanceRecords StaffAdvance[]
+  insurancePolicyRecords InsurancePolicy[]
+  insuranceClaimRecords InsuranceClaim[]
+  medicalRecordRecords MedicalRecord[]
+  purchaseRecords Purchase[]
+  travelBookingRecords TravelBooking[]
+  travelDocumentRecords TravelDocument[]
+  smartDeviceRecords SmartDevice[]
+  reminderRuleRecords ReminderRule[]
+  notificationRecords Notification[]
+  paymentOrderRecords PaymentOrder[]
+  paymentTransactionRecords PaymentTransaction[]
+  auditLogRecords AuditLog[]
+}
+
+model Role {
+  id          String            @id @default(uuid()) @db.Uuid
+  householdId String            @db.Uuid
+  household   Household         @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  key         String
+  name        String
+  isSystem    Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  permissions Permission[]
+  members     HouseholdMember[]
+
+  @@unique([householdId, key])
+}
+
+model Permission {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  roleId      String    @db.Uuid
+  role        Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  module      String
+  canRead     Boolean   @default(false)
+  canWrite    Boolean   @default(false)
+  canDelete   Boolean   @default(false)
+  canApprove  Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([roleId, module])
+  @@index([householdId])
+}
+
+model HouseholdMember {
+  id              String    @id @default(uuid()) @db.Uuid
+  householdId     String    @db.Uuid
+  household       Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  userId          String?   @db.Uuid
+  user            User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  roleId          String    @db.Uuid
+  role            Role      @relation(fields: [roleId], references: [id], onDelete: NoAction)
+  name            String
+  email           String?
+  phone           String?
+  relationship    String?
+  dateOfBirth     DateTime?
+  bloodGroup      String?
+  propertyScope   String[]  @default([])
+  inviteTokenHash String?   @unique
+  inviteExpiresAt DateTime?
+  joinedAt        DateTime?
+  status          String    @default("ACTIVE")
+  createdById     String?   @db.Uuid
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+  propertyOwnership_memberId PropertyOwnership[] @relation("PropertyOwnership_memberId")
+  bankAccount_holderMemberId BankAccount[] @relation("BankAccount_holderMemberId")
+  expense_memberId Expense[] @relation("Expense_memberId")
+  budget_memberId Budget[] @relation("Budget_memberId")
+  subscription_memberId Subscription[] @relation("Subscription_memberId")
+  document_memberId Document[] @relation("Document_memberId")
+  asset_ownerMemberId Asset[] @relation("Asset_ownerMemberId")
+  vehicle_ownerMemberId Vehicle[] @relation("Vehicle_ownerMemberId")
+  maintenanceTask_assignedMemberId MaintenanceTask[] @relation("MaintenanceTask_assignedMemberId")
+  insurancePolicy_insuredMemberId InsurancePolicy[] @relation("InsurancePolicy_insuredMemberId")
+  insuranceClaim_memberId InsuranceClaim[] @relation("InsuranceClaim_memberId")
+  medicalRecord_memberId MedicalRecord[] @relation("MedicalRecord_memberId")
+  purchase_memberId Purchase[] @relation("Purchase_memberId")
+  travelBooking_memberId TravelBooking[] @relation("TravelBooking_memberId")
+  travelDocument_memberId TravelDocument[] @relation("TravelDocument_memberId")
+  notification_recipientMemberId Notification[] @relation("Notification_recipientMemberId")
+  paymentOrder_initiatedByMemberId PaymentOrder[] @relation("PaymentOrder_initiatedByMemberId")
+  auditLog_actorMemberId AuditLog[] @relation("AuditLog_actorMemberId")
+
+  @@unique([householdId, userId])
+  @@index([householdId, deletedAt])
+}
+
+model DocumentVersion {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  documentId  String    @db.Uuid
+  document    Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  version     Int
+  fileName    String
+  mimeType    String
+  sizeBytes   Int
+  storageKey  String
+  checksum    String
+  note        String?
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+
+  @@unique([documentId, version])
+  @@index([householdId])
+}
+
+model DocumentShare {
+  id            String    @id @default(uuid()) @db.Uuid
+  householdId   String    @db.Uuid
+  household     Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  documentId    String    @db.Uuid
+  document      Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  tokenHash     String    @unique
+  expiresAt     DateTime
+  maxDownloads  Int?
+  downloadCount Int       @default(0)
+  revokedAt     DateTime?
+  note          String?
+  createdById   String?   @db.Uuid
+  createdAt     DateTime  @default(now())
+
+  @@index([householdId, documentId])
+}
+
+model AIConversation {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  userId      String    @db.Uuid
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  messages    Json      @default("[]")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId, userId])
+}
+
+model DeviceToken {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token      String   @unique
+  platform   String
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Consent {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @db.Uuid
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose     String
+  granted     Boolean   @default(false)
+  version     String    @default("1")
+  grantedAt   DateTime?
+  withdrawnAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([userId, purpose])
+}
+
+model DataRequest {
+  id           String     @id @default(uuid()) @db.Uuid
+  householdId  String?    @db.Uuid
+  household    Household? @relation(fields: [householdId], references: [id], onDelete: SetNull)
+  userId       String     @db.Uuid
+  type         String
+  scope        String
+  status       String     @default("REQUESTED")
+  scheduledFor DateTime?
+  completedAt  DateTime?
+  note         String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// Models generated from the resource registry
+// ---------------------------------------------------------------------------
+
+model Property {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  name String
+  propertyType String
+  usage String?
+  status String @default("ACTIVE")
+  addressLine1 String?
+  addressLine2 String?
+  city String?
+  state String?
+  postalCode String?
+  country String @default("India")
+  ownershipType String?
+  ownerNames String?
+  purchaseDate DateTime?
+  purchaseValue Decimal? @db.Decimal(14, 2)
+  currentValue Decimal? @db.Decimal(14, 2)
+  valuationDate DateTime?
+  carpetAreaSqft Float?
+  builtUpAreaSqft Float?
+  registrationNumber String?
+  registrationDate DateTime?
+  registrationOffice String?
+  propertyTaxId String?
+  propertyTaxAmount Decimal? @db.Decimal(14, 2)
+  propertyTaxDueDate DateTime?
+  propertyTaxFrequency String?
+  societyName String?
+  societyContact String?
+  societyMaintenanceAmount Decimal? @db.Decimal(14, 2)
+  parkingDetails String?
+  loanLender String?
+  loanAccountNumber String?
+  loanPrincipal Decimal? @db.Decimal(14, 2)
+  loanOutstanding Decimal? @db.Decimal(14, 2)
+  loanEmi Decimal? @db.Decimal(14, 2)
+  loanEmiDay Int?
+  loanInterestRate Float?
+  loanEndDate DateTime?
+  tenantName String?
+  tenantPhone String?
+  tenantEmail String?
+  leaseStart DateTime?
+  leaseEnd DateTime?
+  monthlyRent Decimal? @db.Decimal(14, 2)
+  securityDeposit Decimal? @db.Decimal(14, 2)
+  rentDueDay Int?
+  notes String?
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  propertyOwnership_propertyId PropertyOwnership[] @relation("PropertyOwnership_propertyId")
+  room_propertyId Room[] @relation("Room_propertyId")
+  expense_propertyId Expense[] @relation("Expense_propertyId")
+  budget_propertyId Budget[] @relation("Budget_propertyId")
+  billProvider_propertyId BillProvider[] @relation("BillProvider_propertyId")
+  document_propertyId Document[] @relation("Document_propertyId")
+  asset_propertyId Asset[] @relation("Asset_propertyId")
+  vehicle_propertyId Vehicle[] @relation("Vehicle_propertyId")
+  appliance_propertyId Appliance[] @relation("Appliance_propertyId")
+  maintenanceTask_propertyId MaintenanceTask[] @relation("MaintenanceTask_propertyId")
+  staff_propertyId Staff[] @relation("Staff_propertyId")
+  insurancePolicy_propertyId InsurancePolicy[] @relation("InsurancePolicy_propertyId")
+  purchase_propertyId Purchase[] @relation("Purchase_propertyId")
+  smartDevice_propertyId SmartDevice[] @relation("SmartDevice_propertyId")
+
+  @@index([householdId, deletedAt])
+}
+
+model PropertyOwnership {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  propertyId String @db.Uuid
+  propertyRef Property @relation("PropertyOwnership_propertyId", fields: [propertyId], references: [id], onDelete: NoAction)
+  ownerName String
+  memberId String? @db.Uuid
+  memberRef HouseholdMember? @relation("PropertyOwnership_memberId", fields: [memberId], references: [id], onDelete: SetNull)
+  sharePercent Float?
+  ownershipSince DateTime?
+  notes String?
+  status String @default("ACTIVE")
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId, deletedAt])
+  @@index([propertyId])
+}
+
+model Room {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  propertyId String @db.Uuid
+  propertyRef Property @relation("Room_propertyId", fields: [propertyId], references: [id], onDelete: NoAction)
+  name String
+  roomType String?
+  floor String?
+  areaSqft Float?
+  notes String?
+  status String @default("ACTIVE")
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  appliance_roomId Appliance[] @relation("Appliance_roomId")
+  maintenanceTask_roomId MaintenanceTask[] @relation("MaintenanceTask_roomId")
+  smartDevice_roomId SmartDevice[] @relation("SmartDevice_roomId")
+
+  @@index([householdId, deletedAt])
+  @@index([propertyId])
+}
+
+model BankAccount {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  name String
+  accountType String
+  institution String?
+  last4 String?
+  ifsc String?
+  holderMemberId String? @db.Uuid
+  holderMemberRef HouseholdMember? @relation("BankAccount_holderMemberId", fields: [holderMemberId], references: [id], onDelete: SetNull)
+  openingBalance Decimal? @db.Decimal(14, 2)
+  currentBalance Decimal? @db.Decimal(14, 2)
+  creditLimit Decimal? @db.Decimal(14, 2)
+  statementDay Int?
+  dueDay Int?
+  status String @default("ACTIVE")
+  notes String?
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  expense_bankAccountId Expense[] @relation("Expense_bankAccountId")
+  transaction_bankAccountId Transaction[] @relation("Transaction_bankAccountId")
+  bill_bankAccountId Bill[] @relation("Bill_bankAccountId")
+  subscription_bankAccountId Subscription[] @relation("Subscription_bankAccountId")
+  fuelLog_bankAccountId FuelLog[] @relation("FuelLog_bankAccountId")
+  vehicleService_bankAccountId VehicleService[] @relation("VehicleService_bankAccountId")
+  workOrder_bankAccountId WorkOrder[] @relation("WorkOrder_bankAccountId")
+  salary_bankAccountId Salary[] @relation("Salary_bankAccountId")
+  medicalRecord_bankAccountId MedicalRecord[] @relation("MedicalRecord_bankAccountId")
+  purchase_bankAccountId Purchase[] @relation("Purchase_bankAccountId")
+  travelBooking_bankAccountId TravelBooking[] @relation("TravelBooking_bankAccountId")
+  paymentOrder_bankAccountId PaymentOrder[] @relation("PaymentOrder_bankAccountId")
+
+  @@index([householdId, deletedAt])
+}
+
+model Expense {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  date DateTime
+  description String
+  amount Decimal @db.Decimal(14, 2)
+  kind String @default("EXPENSE")
+  category String?
+  merchant String?
+  paymentMethod String?
+  bankAccountId String? @db.Uuid
+  bankAccountRef BankAccount? @relation("Expense_bankAccountId", fields: [bankAccountId], references: [id], onDelete: SetNull)
+  memberId String? @db.Uuid
+  memberRef HouseholdMember? @relation("Expense_memberId", fields: [memberId], references: [id], onDelete: SetNull)
+  propertyId String? @db.Uuid
+  propertyRef Property? @relation("Expense_propertyId", fields: [propertyId], references: [id], onDelete: SetNull)
+  vendorId String? @db.Uuid
+  vendorRef Vendor? @relation("Expense_vendorId", fields: [vendorId], references: [id], onDelete: SetNull)
+  isRecurring Boolean?
+  recurrence String?
+  isReimbursable Boolean?
+  reimbursementStatus String?
+  reimbursedAmount Decimal? @db.Decimal(14, 2)
+  gstAmount Decimal? @db.Decimal(14, 2)
+  invoiceNumber String?
+  documentId String? @db.Uuid
+  documentRef Document? @relation("Expense_documentId", fields: [documentId], references: [id], onDelete: SetNull)
+  tags String[] @default([])
+  notes String?
+  sourceType String?
+  sourceId String?
+  approvalStatus String @default("NOT_REQUIRED")
+  approvedById String?
+  approvedAt DateTime?
+  autoCategorised Boolean?
+  duplicateSuspect Boolean?
+  status String @default("ACTIVE")
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  transaction_matchedExpenseId Transaction[] @relation("Transaction_matchedExpenseId")
+
+  @@index([householdId, deletedAt])
+  @@index([householdId, date])
+  @@index([householdId, sourceType, sourceId])
+}
+
+model Transaction {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  bankAccountId String @db.Uuid
+  bankAccountRef BankAccount @relation("Transaction_bankAccountId", fields: [bankAccountId], references: [id], onDelete: NoAction)
+  date DateTime
+  description String
+  amount Decimal @db.Decimal(14, 2)
+  direction String
+  reference String?
+  balanceAfter Decimal? @db.Decimal(14, 2)
+  category String?
+  matchedExpenseId String? @db.Uuid
+  matchedExpenseRef Expense? @relation("Transaction_matchedExpenseId", fields: [matchedExpenseId], references: [id], onDelete: SetNull)
+  reconciled Boolean?
+  notes String?
+  source String @default("MANUAL")
+  importBatch String?
+  fingerprint String?
+  duplicateSuspect Boolean?
+  status String @default("ACTIVE")
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId, deletedAt])
+  @@index([bankAccountId])
+  @@index([householdId, date])
+  @@index([householdId, fingerprint])
+}
+
+model Budget {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  name String
+  category String @default("ALL")
+  period String @default("MONTHLY")
+  amount Decimal @db.Decimal(14, 2)
+  propertyId String? @db.Uuid
+  propertyRef Property? @relation("Budget_propertyId", fields: [propertyId], references: [id], onDelete: SetNull)
+  memberId String? @db.Uuid
+  memberRef HouseholdMember? @relation("Budget_memberId", fields: [memberId], references: [id], onDelete: SetNull)
+  alertThresholdPercent Int @default(80)
+  status String @default("ACTIVE")
+  notes String?
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId, deletedAt])
+}
+
+model BillProvider {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  name String
+  utilityType String
+  providerName String
+  consumerNumber String?
+  accountNumber String?
+  billingCycle String @default("MONTHLY")
+  billingDay Int?
+  propertyId String? @db.Uuid
+  propertyRef Property? @relation("BillProvider_propertyId", fields: [propertyId], references: [id], onDelete: SetNull)
+  registeredMobile String?
+  autopay Boolean?
+  billerId String?
+  status String @default("ACTIVE")
+  notes String?
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  bill_providerId Bill[] @relation("Bill_providerId")
+
+  @@index([householdId, deletedAt])
+}
+
+model Bill {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  providerId String @db.Uuid
+  providerRef BillProvider @relation("Bill_providerId", fields: [providerId], references: [id], onDelete: NoAction)
+  billNumber String?
+  billDate DateTime?
+  periodStart DateTime?
+  periodEnd DateTime?
+  amount Decimal @db.Decimal(14, 2)
+  dueDate DateTime
+  status String @default("UNPAID")
+  previousReading Float?
+  currentReading Float?
+  unitsConsumed Float?
+  readingUnit String?
+  paidAmount Decimal? @db.Decimal(14, 2)
+  paidDate DateTime?
+  paymentMethod String?
+  bankAccountId String? @db.Uuid
+  bankAccountRef BankAccount? @relation("Bill_bankAccountId", fields: [bankAccountId], references: [id], onDelete: SetNull)
+  paymentReference String?
+  lateFee Decimal? @db.Decimal(14, 2)
+  documentId String? @db.Uuid
+  documentRef Document? @relation("Bill_documentId", fields: [documentId], references: [id], onDelete: SetNull)
+  notes String?
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  paymentOrder_billId PaymentOrder[] @relation("PaymentOrder_billId")
+
+  @@index([householdId, deletedAt])
+  @@index([providerId])
+  @@index([householdId, dueDate])
+}
+
+model Subscription {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  name String
+  provider String?
+  category String
+  plan String?
+  amount Decimal @db.Decimal(14, 2)
+  billingCycle String @default("MONTHLY")
+  startDate DateTime?
+  nextRenewalDate DateTime?
+  autoRenew Boolean @default(true)
+  paymentMethod String?
+  bankAccountId String? @db.Uuid
+  bankAccountRef BankAccount? @relation("Subscription_bankAccountId", fields: [bankAccountId], references: [id], onDelete: SetNull)
+  memberId String? @db.Uuid
+  memberRef HouseholdMember? @relation("Subscription_memberId", fields: [memberId], references: [id], onDelete: SetNull)
+  lastUsedDate DateTime?
+  sharedWith String?
+  accountEmail String?
+  status String @default("ACTIVE")
+  notes String?
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId, deletedAt])
+  @@index([householdId, nextRenewalDate])
+}
+
+model DocumentCategory {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  name String
+  defaultSensitivity String @default("NORMAL")
+  description String?
+  status String @default("ACTIVE")
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  document_categoryId Document[] @relation("Document_categoryId")
+
+  @@index([householdId, deletedAt])
+}
+
+model Document {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  title String
+  categoryId String? @db.Uuid
+  categoryRef DocumentCategory? @relation("Document_categoryId", fields: [categoryId], references: [id], onDelete: SetNull)
+  sensitivity String @default("NORMAL")
+  tags String[] @default([])
+  description String?
+  issueDate DateTime?
+  expiryDate DateTime?
+  propertyId String? @db.Uuid
+  propertyRef Property? @relation("Document_propertyId", fields: [propertyId], references: [id], onDelete: SetNull)
+  vehicleId String? @db.Uuid
+  vehicleRef Vehicle? @relation("Document_vehicleId", fields: [vehicleId], references: [id], onDelete: SetNull)
+  applianceId String? @db.Uuid
+  applianceRef Appliance? @relation("Document_applianceId", fields: [applianceId], references: [id], onDelete: SetNull)
+  memberId String? @db.Uuid
+  memberRef HouseholdMember? @relation("Document_memberId", fields: [memberId], references: [id], onDelete: SetNull)
+  restrictedToMemberIds String[] @default([])
+  fileName String?
+  mimeType String?
+  sizeBytes Int?
+  storageKey String?
+  checksum String?
+  currentVersion Int @default(1)
+  extractedText String?
+  extractedData Json?
+  ocrStatus String @default("PENDING")
+  status String @default("ACTIVE")
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  versions DocumentVersion[]
+  shares DocumentShare[]
+  expense_documentId Expense[] @relation("Expense_documentId")
+  bill_documentId Bill[] @relation("Bill_documentId")
+  inboxItem_documentId InboxItem[] @relation("InboxItem_documentId")
+  asset_invoiceDocumentId Asset[] @relation("Asset_invoiceDocumentId")
+  asset_photoDocumentId Asset[] @relation("Asset_photoDocumentId")
+  vehicleService_documentId VehicleService[] @relation("VehicleService_documentId")
+  appliance_invoiceDocumentId Appliance[] @relation("Appliance_invoiceDocumentId")
+  warranty_documentId Warranty[] @relation("Warranty_documentId")
+  workOrder_quotationDocumentId WorkOrder[] @relation("WorkOrder_quotationDocumentId")
+  workOrder_invoiceDocumentId WorkOrder[] @relation("WorkOrder_invoiceDocumentId")
+  staff_idDocumentId Staff[] @relation("Staff_idDocumentId")
+  staff_agreementDocumentId Staff[] @relation("Staff_agreementDocumentId")
+  insurancePolicy_documentId InsurancePolicy[] @relation("InsurancePolicy_documentId")
+  insuranceClaim_documentId InsuranceClaim[] @relation("InsuranceClaim_documentId")
+  medicalRecord_documentId MedicalRecord[] @relation("MedicalRecord_documentId")
+  purchase_invoiceDocumentId Purchase[] @relation("Purchase_invoiceDocumentId")
+  travelBooking_documentId TravelBooking[] @relation("TravelBooking_documentId")
+  travelDocument_documentId TravelDocument[] @relation("TravelDocument_documentId")
+
+  @@index([householdId, deletedAt])
+}
+
+model InboxItem {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  source String?
+  subject String?
+  senderEmail String?
+  documentId String? @db.Uuid
+  documentRef Document? @relation("InboxItem_documentId", fields: [documentId], references: [id], onDelete: SetNull)
+  extracted Json?
+  confidence Float?
+  suggestedType String?
+  status String @default("PENDING_REVIEW")
+  resultType String?
+  resultId String?
+  reviewedById String?
+  reviewedAt DateTime?
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId, deletedAt])
+}
+
+model AssetCategory {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  name String
+  description String?
+  status String @default("ACTIVE")
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  asset_categoryId Asset[] @relation("Asset_categoryId")
+
+  @@index([householdId, deletedAt])
+}
+
+model Asset {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  name String
+  assetType String
+  categoryId String? @db.Uuid
+  categoryRef AssetCategory? @relation("Asset_categoryId", fields: [categoryId], references: [id], onDelete: SetNull)
+  description String?
+  ownerMemberId String? @db.Uuid
+  ownerMemberRef HouseholdMember? @relation("Asset_ownerMemberId", fields: [ownerMemberId], references: [id], onDelete: SetNull)
+  propertyId String? @db.Uuid
+  propertyRef Property? @relation("Asset_propertyId", fields: [propertyId], references: [id], onDelete: SetNull)
+  locationNote String?
+  purchaseDate DateTime?
+  purchasePrice Decimal? @db.Decimal(14, 2)
+  vendor String?
+  currentValue Decimal? @db.Decimal(14, 2)
+  valuationDate DateTime?
+  valuer String?
+  serialNumber String?
+  insurancePolicyId String? @db.Uuid
+  insurancePolicyRef InsurancePolicy? @relation("Asset_insurancePolicyId", fields: [insurancePolicyId], references: [id], onDelete: SetNull)
+  invoiceDocumentId String? @db.Uuid
+  invoiceDocumentRef Document? @relation("Asset_invoiceDocumentId", fields: [invoiceDocumentId], references: [id], onDelete: SetNull)
+  photoDocumentId String? @db.Uuid
+  photoDocumentRef Document? @relation("Asset_photoDocumentId", fields: [photoDocumentId], references: [id], onDelete: SetNull)
+  status String @default("OWNED")
+  notes String?
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  assetValuation_assetId AssetValuation[] @relation("AssetValuation_assetId")
+  warranty_assetId Warranty[] @relation("Warranty_assetId")
+
+  @@index([householdId, deletedAt])
+}
+
+model AssetValuation {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  assetId String @db.Uuid
+  assetRef Asset @relation("AssetValuation_assetId", fields: [assetId], references: [id], onDelete: NoAction)
+  date DateTime
+  value Decimal @db.Decimal(14, 2)
+  valuer String?
+  notes String?
+  status String @default("ACTIVE")
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId, deletedAt])
+  @@index([assetId])
+  @@index([householdId, date])
+}
+
+model Vehicle {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  name String
+  vehicleType String
+  make String
+  model String
+  variant String?
+  year Int?
+  color String?
+  registrationNumber String
+  vin String?
+  engineNumber String?
+  fuelType String?
+  purchaseDate DateTime?
+  purchasePrice Decimal? @db.Decimal(14, 2)
+  currentOdometer Int?
+  ownerMemberId String? @db.Uuid
+  ownerMemberRef HouseholdMember? @relation("Vehicle_ownerMemberId", fields: [ownerMemberId], references: [id], onDelete: SetNull)
+  propertyId String? @db.Uuid
+  propertyRef Property? @relation("Vehicle_propertyId", fields: [propertyId], references: [id], onDelete: SetNull)
+  status String @default("ACTIVE")
+  primaryDriverName String?
+  driverStaffId String? @db.Uuid
+  driverStaffRef Staff? @relation("Vehicle_driverStaffId", fields: [driverStaffId], references: [id], onDelete: SetNull)
+  insurancePolicyId String? @db.Uuid
+  insurancePolicyRef InsurancePolicy? @relation("Vehicle_insurancePolicyId", fields: [insurancePolicyId], references: [id], onDelete: SetNull)
+  insuranceExpiry DateTime?
+  pucNumber String?
+  pucExpiry DateTime?
+  registrationExpiry DateTime?
+  roadTaxAmount Decimal? @db.Decimal(14, 2)
+  roadTaxValidTill DateTime?
+  fastagId String?
+  loanLender String?
+  loanOutstanding Decimal? @db.Decimal(14, 2)
+  loanEmi Decimal? @db.Decimal(14, 2)
+  loanEndDate DateTime?
+  serviceIntervalKm Int?
+  serviceIntervalMonths Int?
+  lastServiceDate DateTime?
+  lastServiceOdometer Int?
+  nextServiceDate DateTime?
+  nextServiceOdometer Int?
+  notes String?
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  document_vehicleId Document[] @relation("Document_vehicleId")
+  fuelLog_vehicleId FuelLog[] @relation("FuelLog_vehicleId")
+  vehicleService_vehicleId VehicleService[] @relation("VehicleService_vehicleId")
+  warranty_vehicleId Warranty[] @relation("Warranty_vehicleId")
+
+  @@index([householdId, deletedAt])
+}
+
+model FuelLog {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  vehicleId String @db.Uuid
+  vehicleRef Vehicle @relation("FuelLog_vehicleId", fields: [vehicleId], references: [id], onDelete: NoAction)
+  date DateTime
+  fuelType String?
+  quantity Float
+  pricePerUnit Float?
+  totalCost Decimal @db.Decimal(14, 2)
+  odometer Int
+  fullTank Boolean @default(true)
+  station String?
+  paymentMethod String?
+  bankAccountId String? @db.Uuid
+  bankAccountRef BankAccount? @relation("FuelLog_bankAccountId", fields: [bankAccountId], references: [id], onDelete: SetNull)
+  notes String?
+  status String @default("ACTIVE")
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId, deletedAt])
+  @@index([vehicleId])
+  @@index([householdId, date])
+}
+
+model VehicleService {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  vehicleId String @db.Uuid
+  vehicleRef Vehicle @relation("VehicleService_vehicleId", fields: [vehicleId], references: [id], onDelete: NoAction)
+  date DateTime
+  serviceType String
+  description String?
+  odometer Int?
+  serviceCentre String?
+  vendorId String? @db.Uuid
+  vendorRef Vendor? @relation("VehicleService_vendorId", fields: [vendorId], references: [id], onDelete: SetNull)
+  partsReplaced String?
+  labourCost Decimal? @db.Decimal(14, 2)
+  partsCost Decimal? @db.Decimal(14, 2)
+  totalCost Decimal @db.Decimal(14, 2)
+  invoiceNumber String?
+  documentId String? @db.Uuid
+  documentRef Document? @relation("VehicleService_documentId", fields: [documentId], references: [id], onDelete: SetNull)
+  warrantyTill DateTime?
+  nextServiceDate DateTime?
+  nextServiceOdometer Int?
+  paymentMethod String?
+  bankAccountId String? @db.Uuid
+  bankAccountRef BankAccount? @relation("VehicleService_bankAccountId", fields: [bankAccountId], references: [id], onDelete: SetNull)
+  notes String?
+  status String @default("ACTIVE")
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId, deletedAt])
+  @@index([vehicleId])
+  @@index([householdId, date])
+}
+
+model Appliance {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  name String
+  applianceType String
+  manufacturer String?
+  model String?
+  serialNumber String?
+  propertyId String? @db.Uuid
+  propertyRef Property? @relation("Appliance_propertyId", fields: [propertyId], references: [id], onDelete: SetNull)
+  roomId String? @db.Uuid
+  roomRef Room? @relation("Appliance_roomId", fields: [roomId], references: [id], onDelete: SetNull)
+  purchaseDate DateTime?
+  purchasePrice Decimal? @db.Decimal(14, 2)
+  vendor String?
+  invoiceDocumentId String? @db.Uuid
+  invoiceDocumentRef Document? @relation("Appliance_invoiceDocumentId", fields: [invoiceDocumentId], references: [id], onDelete: SetNull)
+  condition String @default("GOOD")
+  expectedLifeYears Int?
+  energyRating String?
+  status String @default("ACTIVE")
+  warrantyStart DateTime?
+  warrantyEnd DateTime?
+  extendedWarrantyEnd DateTime?
+  amcProvider String?
+  amcStart DateTime?
+  amcEnd DateTime?
+  amcCost Decimal? @db.Decimal(14, 2)
+  amcContact String?
+  serviceIntervalMonths Int?
+  lastServiceDate DateTime?
+  nextServiceDate DateTime?
+  notes String?
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  document_applianceId Document[] @relation("Document_applianceId")
+  warranty_applianceId Warranty[] @relation("Warranty_applianceId")
+  maintenanceTask_applianceId MaintenanceTask[] @relation("MaintenanceTask_applianceId")
+
+  @@index([householdId, deletedAt])
+}
+
+model Warranty {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  itemName String
+  warrantyType String
+  applianceId String? @db.Uuid
+  applianceRef Appliance? @relation("Warranty_applianceId", fields: [applianceId], references: [id], onDelete: SetNull)
+  assetId String? @db.Uuid
+  assetRef Asset? @relation("Warranty_assetId", fields: [assetId], references: [id], onDelete: SetNull)
+  vehicleId String? @db.Uuid
+  vehicleRef Vehicle? @relation("Warranty_vehicleId", fields: [vehicleId], references: [id], onDelete: SetNull)
+  purchaseId String? @db.Uuid
+  purchaseRef Purchase? @relation("Warranty_purchaseId", fields: [purchaseId], references: [id], onDelete: SetNull)
+  provider String?
+  startDate DateTime?
+  endDate DateTime
+  coverage String?
+  claimContact String?
+  documentId String? @db.Uuid
+  documentRef Document? @relation("Warranty_documentId", fields: [documentId], references: [id], onDelete: SetNull)
+  notes String?
+  status String @default("ACTIVE")
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId, deletedAt])
+  @@index([householdId, endDate])
+}
+
+model Vendor {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  name String
+  category String
+  contactPerson String?
+  phone String?
+  altPhone String?
+  email String?
+  address String?
+  gstin String?
+  rating Float?
+  status String @default("ACTIVE")
+  notes String?
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  expense_vendorId Expense[] @relation("Expense_vendorId")
+  vehicleService_vendorId VehicleService[] @relation("VehicleService_vendorId")
+  maintenanceTask_vendorId MaintenanceTask[] @relation("MaintenanceTask_vendorId")
+  workOrder_vendorId WorkOrder[] @relation("WorkOrder_vendorId")
+  purchase_vendorId Purchase[] @relation("Purchase_vendorId")
+
+  @@index([householdId, deletedAt])
+}
+
+model MaintenanceTask {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  title String
+  category String
+  description String?
+  priority String @default("MEDIUM")
+  status String @default("OPEN")
+  dueDate DateTime?
+  completedDate DateTime?
+  propertyId String? @db.Uuid
+  propertyRef Property? @relation("MaintenanceTask_propertyId", fields: [propertyId], references: [id], onDelete: SetNull)
+  roomId String? @db.Uuid
+  roomRef Room? @relation("MaintenanceTask_roomId", fields: [roomId], references: [id], onDelete: SetNull)
+  applianceId String? @db.Uuid
+  applianceRef Appliance? @relation("MaintenanceTask_applianceId", fields: [applianceId], references: [id], onDelete: SetNull)
+  assignedMemberId String? @db.Uuid
+  assignedMemberRef HouseholdMember? @relation("MaintenanceTask_assignedMemberId", fields: [assignedMemberId], references: [id], onDelete: SetNull)
+  vendorId String? @db.Uuid
+  vendorRef Vendor? @relation("MaintenanceTask_vendorId", fields: [vendorId], references: [id], onDelete: SetNull)
+  isRecurring Boolean?
+  recurrence String?
+  estimatedCost Decimal? @db.Decimal(14, 2)
+  actualCost Decimal? @db.Decimal(14, 2)
+  notes String?
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  workOrder_taskId WorkOrder[] @relation("WorkOrder_taskId")
+
+  @@index([householdId, deletedAt])
+  @@index([householdId, dueDate])
+}
+
+model WorkOrder {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  taskId String @db.Uuid
+  taskRef MaintenanceTask @relation("WorkOrder_taskId", fields: [taskId], references: [id], onDelete: NoAction)
+  title String
+  vendorId String? @db.Uuid
+  vendorRef Vendor? @relation("WorkOrder_vendorId", fields: [vendorId], references: [id], onDelete: SetNull)
+  status String @default("QUOTE_REQUESTED")
+  quotationAmount Decimal? @db.Decimal(14, 2)
+  quotationDate DateTime?
+  quotationDocumentId String? @db.Uuid
+  quotationDocumentRef Document? @relation("WorkOrder_quotationDocumentId", fields: [quotationDocumentId], references: [id], onDelete: SetNull)
+  scheduledAt DateTime?
+  completedAt DateTime?
+  invoiceAmount Decimal? @db.Decimal(14, 2)
+  invoiceNumber String?
+  invoiceDocumentId String? @db.Uuid
+  invoiceDocumentRef Document? @relation("WorkOrder_invoiceDocumentId", fields: [invoiceDocumentId], references: [id], onDelete: SetNull)
+  paidAmount Decimal? @db.Decimal(14, 2)
+  paidDate DateTime?
+  paymentMethod String?
+  bankAccountId String? @db.Uuid
+  bankAccountRef BankAccount? @relation("WorkOrder_bankAccountId", fields: [bankAccountId], references: [id], onDelete: SetNull)
+  rating Int?
+  review String?
+  notes String?
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  paymentOrder_workOrderId PaymentOrder[] @relation("PaymentOrder_workOrderId")
+
+  @@index([householdId, deletedAt])
+  @@index([taskId])
+  @@index([householdId, scheduledAt])
+}
+
+model Staff {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  name String
+  role String
+  phone String?
+  altPhone String?
+  address String?
+  emergencyContactName String?
+  emergencyContactPhone String?
+  idType String?
+  idLast4 String?
+  idDocumentId String? @db.Uuid
+  idDocumentRef Document? @relation("Staff_idDocumentId", fields: [idDocumentId], references: [id], onDelete: SetNull)
+  policeVerified Boolean?
+  joiningDate DateTime?
+  exitDate DateTime?
+  monthlySalary Decimal @db.Decimal(14, 2)
+  salaryDay Int @default(1)
+  paymentMethod String?
+  workSchedule String?
+  paidLeavesPerMonth Int?
+  propertyId String? @db.Uuid
+  propertyRef Property? @relation("Staff_propertyId", fields: [propertyId], references: [id], onDelete: SetNull)
+  agreementDocumentId String? @db.Uuid
+  agreementDocumentRef Document? @relation("Staff_agreementDocumentId", fields: [agreementDocumentId], references: [id], onDelete: SetNull)
+  status String @default("ACTIVE")
+  notes String?
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  vehicle_driverStaffId Vehicle[] @relation("Vehicle_driverStaffId")
+  attendance_staffId Attendance[] @relation("Attendance_staffId")
+  salary_staffId Salary[] @relation("Salary_staffId")
+  staffAdvance_staffId StaffAdvance[] @relation("StaffAdvance_staffId")
+
+  @@index([householdId, deletedAt])
+}
+
+model Attendance {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  staffId String @db.Uuid
+  staffRef Staff @relation("Attendance_staffId", fields: [staffId], references: [id], onDelete: NoAction)
+  date DateTime
+  status String @default("PRESENT")
+  notes String?
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId, deletedAt])
+  @@index([staffId])
+  @@index([householdId, date])
+}
+
+model Salary {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  staffId String @db.Uuid
+  staffRef Staff @relation("Salary_staffId", fields: [staffId], references: [id], onDelete: NoAction)
+  month String
+  baseAmount Decimal @db.Decimal(14, 2)
+  bonus Decimal? @db.Decimal(14, 2)
+  deductions Decimal? @db.Decimal(14, 2)
+  advanceRecovered Decimal? @db.Decimal(14, 2)
+  netAmount Decimal? @db.Decimal(14, 2)
+  dueDate DateTime?
+  status String @default("PENDING")
+  paidDate DateTime?
+  paidAmount Decimal? @db.Decimal(14, 2)
+  paymentMethod String?
+  bankAccountId String? @db.Uuid
+  bankAccountRef BankAccount? @relation("Salary_bankAccountId", fields: [bankAccountId], references: [id], onDelete: SetNull)
+  paymentReference String?
+  notes String?
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  paymentOrder_salaryId PaymentOrder[] @relation("PaymentOrder_salaryId")
+
+  @@index([householdId, deletedAt])
+  @@index([staffId])
+  @@index([householdId, dueDate])
+}
+
+model StaffAdvance {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  staffId String @db.Uuid
+  staffRef Staff @relation("StaffAdvance_staffId", fields: [staffId], references: [id], onDelete: NoAction)
+  date DateTime
+  amount Decimal @db.Decimal(14, 2)
+  reason String?
+  recoveredAmount Decimal? @db.Decimal(14, 2)
+  status String @default("OUTSTANDING")
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId, deletedAt])
+  @@index([staffId])
+  @@index([householdId, date])
+}
+
+model InsurancePolicy {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  name String
+  policyType String
+  insurer String
+  policyNumber String
+  insuredMemberId String? @db.Uuid
+  insuredMemberRef HouseholdMember? @relation("InsurancePolicy_insuredMemberId", fields: [insuredMemberId], references: [id], onDelete: SetNull)
+  insuredNames String?
+  propertyId String? @db.Uuid
+  propertyRef Property? @relation("InsurancePolicy_propertyId", fields: [propertyId], references: [id], onDelete: SetNull)
+  sumInsured Decimal? @db.Decimal(14, 2)
+  premiumAmount Decimal @db.Decimal(14, 2)
+  premiumFrequency String @default("YEARLY")
+  startDate DateTime?
+  expiryDate DateTime
+  nextPremiumDueDate DateTime?
+  beneficiaries String?
+  agentName String?
+  agentPhone String?
+  documentId String? @db.Uuid
+  documentRef Document? @relation("InsurancePolicy_documentId", fields: [documentId], references: [id], onDelete: SetNull)
+  status String @default("ACTIVE")
+  notes String?
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  asset_insurancePolicyId Asset[] @relation("Asset_insurancePolicyId")
+  vehicle_insurancePolicyId Vehicle[] @relation("Vehicle_insurancePolicyId")
+  insuranceClaim_policyId InsuranceClaim[] @relation("InsuranceClaim_policyId")
+  travelBooking_insurancePolicyId TravelBooking[] @relation("TravelBooking_insurancePolicyId")
+
+  @@index([householdId, deletedAt])
+  @@index([householdId, expiryDate])
+}
+
+model InsuranceClaim {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  policyId String @db.Uuid
+  policyRef InsurancePolicy @relation("InsuranceClaim_policyId", fields: [policyId], references: [id], onDelete: NoAction)
+  claimNumber String?
+  claimDate DateTime
+  memberId String? @db.Uuid
+  memberRef HouseholdMember? @relation("InsuranceClaim_memberId", fields: [memberId], references: [id], onDelete: SetNull)
+  incidentDescription String?
+  claimedAmount Decimal @db.Decimal(14, 2)
+  approvedAmount Decimal? @db.Decimal(14, 2)
+  settledAmount Decimal? @db.Decimal(14, 2)
+  status String @default("SUBMITTED")
+  settledDate DateTime?
+  documentId String? @db.Uuid
+  documentRef Document? @relation("InsuranceClaim_documentId", fields: [documentId], references: [id], onDelete: SetNull)
+  notes String?
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  medicalRecord_claimId MedicalRecord[] @relation("MedicalRecord_claimId")
+
+  @@index([householdId, deletedAt])
+  @@index([policyId])
+  @@index([householdId, claimDate])
+}
+
+model MedicalRecord {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  memberId String @db.Uuid
+  memberRef HouseholdMember @relation("MedicalRecord_memberId", fields: [memberId], references: [id], onDelete: NoAction)
+  recordType String
+  date DateTime
+  provider String?
+  doctorName String?
+  summary String?
+  amount Decimal? @db.Decimal(14, 2)
+  paymentMethod String?
+  bankAccountId String? @db.Uuid
+  bankAccountRef BankAccount? @relation("MedicalRecord_bankAccountId", fields: [bankAccountId], references: [id], onDelete: SetNull)
+  claimId String? @db.Uuid
+  claimRef InsuranceClaim? @relation("MedicalRecord_claimId", fields: [claimId], references: [id], onDelete: SetNull)
+  reimbursementStatus String @default("NOT_APPLICABLE")
+  reimbursedAmount Decimal? @db.Decimal(14, 2)
+  documentId String? @db.Uuid
+  documentRef Document? @relation("MedicalRecord_documentId", fields: [documentId], references: [id], onDelete: SetNull)
+  followUpDate DateTime?
+  notes String?
+  status String @default("ACTIVE")
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId, deletedAt])
+  @@index([memberId])
+  @@index([householdId, date])
+}
+
+model Purchase {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  date DateTime
+  itemName String
+  category String
+  merchant String?
+  platform String?
+  orderNumber String?
+  amount Decimal @db.Decimal(14, 2)
+  quantity Float?
+  paymentMethod String?
+  bankAccountId String? @db.Uuid
+  bankAccountRef BankAccount? @relation("Purchase_bankAccountId", fields: [bankAccountId], references: [id], onDelete: SetNull)
+  memberId String? @db.Uuid
+  memberRef HouseholdMember? @relation("Purchase_memberId", fields: [memberId], references: [id], onDelete: SetNull)
+  propertyId String? @db.Uuid
+  propertyRef Property? @relation("Purchase_propertyId", fields: [propertyId], references: [id], onDelete: SetNull)
+  vendorId String? @db.Uuid
+  vendorRef Vendor? @relation("Purchase_vendorId", fields: [vendorId], references: [id], onDelete: SetNull)
+  invoiceDocumentId String? @db.Uuid
+  invoiceDocumentRef Document? @relation("Purchase_invoiceDocumentId", fields: [invoiceDocumentId], references: [id], onDelete: SetNull)
+  warrantyTill DateTime?
+  returnStatus String @default("NONE")
+  refundAmount Decimal? @db.Decimal(14, 2)
+  returnDeadline DateTime?
+  notes String?
+  status String @default("ACTIVE")
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  warranty_purchaseId Warranty[] @relation("Warranty_purchaseId")
+
+  @@index([householdId, deletedAt])
+  @@index([householdId, date])
+}
+
+model TravelBooking {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  tripName String
+  bookingType String
+  provider String?
+  bookingReference String?
+  travellers String?
+  memberId String? @db.Uuid
+  memberRef HouseholdMember? @relation("TravelBooking_memberId", fields: [memberId], references: [id], onDelete: SetNull)
+  startDate DateTime
+  endDate DateTime?
+  origin String?
+  destination String?
+  amount Decimal? @db.Decimal(14, 2)
+  paymentMethod String?
+  bankAccountId String? @db.Uuid
+  bankAccountRef BankAccount? @relation("TravelBooking_bankAccountId", fields: [bankAccountId], references: [id], onDelete: SetNull)
+  insurancePolicyId String? @db.Uuid
+  insurancePolicyRef InsurancePolicy? @relation("TravelBooking_insurancePolicyId", fields: [insurancePolicyId], references: [id], onDelete: SetNull)
+  documentId String? @db.Uuid
+  documentRef Document? @relation("TravelBooking_documentId", fields: [documentId], references: [id], onDelete: SetNull)
+  status String @default("BOOKED")
+  notes String?
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId, deletedAt])
+  @@index([householdId, startDate])
+}
+
+model TravelDocument {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  memberId String @db.Uuid
+  memberRef HouseholdMember @relation("TravelDocument_memberId", fields: [memberId], references: [id], onDelete: NoAction)
+  docType String
+  country String?
+  numberLast4 String?
+  issueDate DateTime?
+  expiryDate DateTime
+  documentId String? @db.Uuid
+  documentRef Document? @relation("TravelDocument_documentId", fields: [documentId], references: [id], onDelete: SetNull)
+  notes String?
+  status String @default("ACTIVE")
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId, deletedAt])
+  @@index([memberId])
+  @@index([householdId, expiryDate])
+}
+
+model SmartDevice {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  name String
+  deviceType String
+  manufacturer String?
+  model String?
+  propertyId String? @db.Uuid
+  propertyRef Property? @relation("SmartDevice_propertyId", fields: [propertyId], references: [id], onDelete: SetNull)
+  roomId String? @db.Uuid
+  roomRef Room? @relation("SmartDevice_roomId", fields: [roomId], references: [id], onDelete: SetNull)
+  integrationProvider String @default("NONE")
+  externalDeviceId String?
+  firmwareVersion String?
+  installedDate DateTime?
+  status String @default("UNKNOWN")
+  notes String?
+  lastSeenAt DateTime?
+  state Json?
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId, deletedAt])
+}
+
+model ReminderRule {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  name String
+  eventType String
+  offsetsDays String[] @default([])
+  channels String[] @default(["IN_APP"])
+  enabled Boolean @default(true)
+  status String @default("ACTIVE")
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId, deletedAt])
+}
+
+model Notification {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  recipientMemberId String? @db.Uuid
+  recipientMemberRef HouseholdMember? @relation("Notification_recipientMemberId", fields: [recipientMemberId], references: [id], onDelete: SetNull)
+  title String?
+  body String?
+  eventType String?
+  entityType String?
+  entityId String?
+  dueDate DateTime?
+  severity String @default("INFO")
+  dedupeKey String?
+  readAt DateTime?
+  channelStatus Json?
+  status String @default("ACTIVE")
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId, deletedAt])
+  @@unique([recipientMemberId, dedupeKey])
+}
+
+model PaymentOrder {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  description String?
+  payeeName String?
+  amount Decimal? @db.Decimal(14, 2)
+  currency String @default("INR")
+  method String?
+  provider String?
+  providerOrderId String?
+  status String @default("CREATED")
+  billId String? @db.Uuid
+  billRef Bill? @relation("PaymentOrder_billId", fields: [billId], references: [id], onDelete: SetNull)
+  salaryId String? @db.Uuid
+  salaryRef Salary? @relation("PaymentOrder_salaryId", fields: [salaryId], references: [id], onDelete: SetNull)
+  workOrderId String? @db.Uuid
+  workOrderRef WorkOrder? @relation("PaymentOrder_workOrderId", fields: [workOrderId], references: [id], onDelete: SetNull)
+  bankAccountId String? @db.Uuid
+  bankAccountRef BankAccount? @relation("PaymentOrder_bankAccountId", fields: [bankAccountId], references: [id], onDelete: SetNull)
+  scheduledFor DateTime?
+  initiatedByMemberId String? @db.Uuid
+  initiatedByMemberRef HouseholdMember? @relation("PaymentOrder_initiatedByMemberId", fields: [initiatedByMemberId], references: [id], onDelete: SetNull)
+  verifiedAt DateTime?
+  paidDate DateTime?
+  reference String?
+  failureReason String?
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  paymentTransaction_orderId PaymentTransaction[] @relation("PaymentTransaction_orderId")
+
+  @@index([householdId, deletedAt])
+}
+
+model PaymentTransaction {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  orderId String? @db.Uuid
+  orderRef PaymentOrder? @relation("PaymentTransaction_orderId", fields: [orderId], references: [id], onDelete: SetNull)
+  provider String?
+  providerPaymentId String?
+  kind String @default("PAYMENT")
+  amount Decimal? @db.Decimal(14, 2)
+  status String?
+  verified Boolean?
+  receivedAt DateTime?
+  rawPayload Json?
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId, deletedAt])
+}
+
+model AuditLog {
+  id          String    @id @default(uuid()) @db.Uuid
+  householdId String    @db.Uuid
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  action String?
+  entityType String?
+  entityId String?
+  summary String?
+  actorMemberId String? @db.Uuid
+  actorMemberRef HouseholdMember? @relation("AuditLog_actorMemberId", fields: [actorMemberId], references: [id], onDelete: SetNull)
+  actorUserId String?
+  changes Json?
+  ip String?
+  userAgent String?
+  status String @default("ACTIVE")
+  createdById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([householdId, deletedAt])
+  @@index([householdId, entityType, entityId])
+}
