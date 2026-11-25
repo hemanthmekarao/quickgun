@@ -57,7 +57,8 @@ export default function ReportsPage() {
               <p className="tabular mt-1 text-xl font-semibold">{fmt(w.netWorth)}</p>
             </div>
           </div>
-          <table className="mt-5 w-full text-left text-sm">
+          <div className="relative mt-5 overflow-x-auto">
+          <table className="w-full min-w-[420px] text-left text-sm">
             <thead>
               <tr className="border-b border-line text-xs text-muted">
                 <th className="py-2 font-medium">Group</th>
@@ -77,6 +78,7 @@ export default function ReportsPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </Card>
       ) : worth.error ? (
         <div className="mb-6">

@@ -127,7 +127,7 @@ jobs:
       - name: Server logs
         if: always()
         run: |
-          echo "--- api ---"; tail -n 60 /tmp/api.log || true
+          echo "--- api (warnings and errors) ---"; grep -v -E "RouterExplorer|RoutesResolver|InstanceLoader" /tmp/api.log | grep -i -E "warn|error|exception" | tail -n 40 || true
           echo "--- web ---"; tail -n 30 /tmp/web.log || true
       - uses: actions/upload-artifact@v4
         if: always()

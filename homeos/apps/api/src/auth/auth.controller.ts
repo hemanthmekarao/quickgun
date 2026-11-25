@@ -9,6 +9,8 @@ import { AuthService, type ClientInfo } from './auth.service';
 const REFRESH_COOKIE = 'homeos_refresh';
 /** Attempts per minute per client on credential endpoints. */
 const AUTH_LIMIT = process.env.NODE_ENV === 'test' ? 100_000 : 10;
+/** Every page load exchanges the refresh cookie once, so this is higher; it follows the global limit when that is raised. */
+const REFRESH_LIMIT = process.env.NODE_ENV === 'test' ? 100_000 : Math.max(60, Number(process.env.RATE_LIMIT_PER_MINUTE ?? 0) || 0);
 
 function client(req: Request): ClientInfo {
   return {
@@ -60,7 +62,7 @@ export class AuthController {
 
   @Post('refresh')
   @HttpCode(200)
-  @Throttle({ default: { limit: 60, ttl: 60_000 } })
+  @Throttle({ default: { limit: REFRESH_LIMIT, ttl: 60_000 } })
   async refresh(@Body() body: any, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const token = body?.refreshToken || (req as any).cookies?.[REFRESH_COOKIE];
     try {

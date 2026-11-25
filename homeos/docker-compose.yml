@@ -1,0 +1,67 @@
+# Local / single-server deployment. Copy .env.example to .env and set the two secrets first.
+#   docker compose up --build
+# Web: http://localhost:3000   API docs: http://localhost:4000/docs
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: homeos
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-homeos}
+      POSTGRES_DB: homeos
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U homeos -d homeos']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - redisdata:/data
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://homeos:${POSTGRES_PASSWORD:-homeos}@postgres:5432/homeos
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:?set DATA_ENCRYPTION_KEY in .env}
+      PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:4000}
+      PUBLIC_WEB_URL: ${PUBLIC_WEB_URL:-http://localhost:3000}
+      WEB_ORIGINS: ${WEB_ORIGINS:-http://localhost:3000}
+      # Set to true when serving over HTTPS (required for real use).
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      SMTP_URL: ${SMTP_URL:-}
+    volumes:
+      - documents:/app/apps/api/storage
+    ports:
+      - '4000:4000'
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        API_URL: http://api:4000
+    depends_on:
+      - api
+    ports:
+      - '3000:3000'
+
+volumes:
+  pgdata:
+  redisdata:
+  documents:

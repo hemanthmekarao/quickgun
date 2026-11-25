@@ -398,7 +398,7 @@ export function ResourceView({ resource, filter = {}, fixed = {}, defaults, colu
             action={showCreate && !search && !enumFilter ? <Button variant="primary" icon={<Plus className="h-4 w-4" />} onClick={() => setCreating(true)}>Add {def.singular.toLowerCase()}</Button> : undefined}
           />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className="w-full min-w-[560px] text-left text-sm">
               <thead>
                 <tr className="border-b border-line text-xs text-muted">
@@ -407,7 +407,7 @@ export function ResourceView({ resource, filter = {}, fixed = {}, defaults, colu
                       {c.label}
                     </th>
                   ))}
-                  {hasActions ? <th scope="col" className="px-4 py-2.5 text-right font-medium"><span className="sr-only">Actions</span></th> : null}
+                  {hasActions ? <th scope="col" className="px-4 py-2.5 text-right font-medium" aria-label="Actions" /> : null}
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">

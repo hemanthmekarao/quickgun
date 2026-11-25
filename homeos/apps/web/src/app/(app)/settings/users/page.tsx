@@ -90,7 +90,7 @@ export default function UsersPage() {
         {roles.isLoading ? (
           <Spinner />
         ) : (
-          <div className="overflow-x-auto border-t border-line">
+          <div className="relative overflow-x-auto border-t border-line">
             <table className="w-full min-w-[520px] text-sm">
               <thead>
                 <tr className="border-b border-line text-xs text-muted">
