@@ -560,6 +560,10 @@ describe('documents', () => {
     const xref = pdf.length;
     pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('')}`;
     pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+    // Call the PDF library directly first so that any failure shows its own error.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const direct = await require('pdf-parse/lib/pdf-parse.js')(Buffer.from(pdf, 'latin1'));
+    expect(direct.text).toContain('zebrawood');
     const up = await http.post('/v1/documents/upload').set('Authorization', `Bearer ${owner.token}`).set('X-Household-Id', owner.hh).attach('file', Buffer.from(pdf, 'latin1'), 'certificate.pdf');
     expect(up.status).toBe(201);
     expect(up.body).toMatchObject({ mimeType: 'application/pdf', ocrStatus: 'DONE' });
